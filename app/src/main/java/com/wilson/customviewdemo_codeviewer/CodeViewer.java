@@ -1,12 +1,13 @@
 package com.wilson.customviewdemo_codeviewer;
 
+// https://www.youtube.com/watch?v=ktbYUrlN_Ws
+// https://www.youtube.com/watch?v=-8M5nDABiqg
+// Measure starts first
+
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.drawable.Drawable;
-import android.text.TextPaint;
 import android.util.AttributeSet;
 import android.view.View;
 
@@ -14,14 +15,9 @@ import android.view.View;
  * TODO: document your custom view class.
  */
 public class CodeViewer extends View {
-    private String mExampleString; // TODO: use a default from R.string...
-    private int mExampleColor = Color.RED; // TODO: use a default from R.color...
-    private float mExampleDimension = 0; // TODO: use a default from R.dimen...
-    private Drawable mExampleDrawable;
-
-    private TextPaint mTextPaint;
-    private float mTextWidth;
-    private float mTextHeight;
+    private int mKeywordColor, mVariableColor, mPrimitiveColor, mLiteralColor;
+    private int mLanguage, mTabLength;
+    private boolean mWrapLines;
 
     public CodeViewer(Context context) {
         super(context);
@@ -39,46 +35,21 @@ public class CodeViewer extends View {
     }
 
     private void init(AttributeSet attrs, int defStyle) {
-        // Load attributes
-        final TypedArray a = getContext().obtainStyledAttributes(
-                attrs, R.styleable.CodeViewer, defStyle, 0);
+        TypedArray a = getContext().obtainStyledAttributes(attrs, R.styleable.CodeViewer);
 
-        mExampleString = a.getString(
-                R.styleable.CodeViewer_exampleString);
-        mExampleColor = a.getColor(
-                R.styleable.CodeViewer_exampleColor,
-                mExampleColor);
-        // Use getDimensionPixelSize or getDimensionPixelOffset when dealing with
-        // values that should fall on pixel boundaries.
-        mExampleDimension = a.getDimension(
-                R.styleable.CodeViewer_exampleDimension,
-                mExampleDimension);
-
-        if (a.hasValue(R.styleable.CodeViewer_exampleDrawable)) {
-            mExampleDrawable = a.getDrawable(
-                    R.styleable.CodeViewer_exampleDrawable);
-            mExampleDrawable.setCallback(this);
+        try{
+            mWrapLines     = a.getBoolean(R.styleable.CodeViewer_wrapLines, true);
+            mLanguage      = a.getInteger(R.styleable.CodeViewer_language, 0);
+            mTabLength     = a.getInteger(R.styleable.CodeViewer_tabLength, 4);
+            mKeywordColor  = a.getColor(R.styleable.CodeViewer_keywordColor, Color.RED);
+            mVariableColor = a.getColor(R.styleable.CodeViewer_variableColor, Color.BLUE);
+            mPrimitiveColor = a.getColor(R.styleable.CodeViewer_primitiveColor, Color.RED);
+            mLiteralColor   = a.getColor(R.styleable.CodeViewer_literalColor, Color.GREEN);
+        }finally{
+            a.recycle();
         }
-
-        a.recycle();
-
-        // Set up a default TextPaint object
-        mTextPaint = new TextPaint();
-        mTextPaint.setFlags(Paint.ANTI_ALIAS_FLAG);
-        mTextPaint.setTextAlign(Paint.Align.LEFT);
-
-        // Update TextPaint and text measurements from attributes
-        invalidateTextPaintAndMeasurements();
     }
 
-    private void invalidateTextPaintAndMeasurements() {
-        mTextPaint.setTextSize(mExampleDimension);
-        mTextPaint.setColor(mExampleColor);
-        mTextWidth = mTextPaint.measureText(mExampleString);
-
-        Paint.FontMetrics fontMetrics = mTextPaint.getFontMetrics();
-        mTextHeight = fontMetrics.bottom;
-    }
 
     @Override
     protected void onDraw(Canvas canvas) {
@@ -95,95 +66,10 @@ public class CodeViewer extends View {
         int contentHeight = getHeight() - paddingTop - paddingBottom;
 
         // Draw the text.
-        canvas.drawText(mExampleString,
-                paddingLeft + (contentWidth - mTextWidth) / 2,
-                paddingTop + (contentHeight + mTextHeight) / 2,
-                mTextPaint);
-
-        // Draw the example drawable on top of the text.
-        if (mExampleDrawable != null) {
-            mExampleDrawable.setBounds(paddingLeft, paddingTop,
-                    paddingLeft + contentWidth, paddingTop + contentHeight);
-            mExampleDrawable.draw(canvas);
-        }
+//        canvas.drawText(mExampleString,
+//                paddingLeft + (contentWidth - mTextWidth) / 2,
+//                paddingTop + (contentHeight + mTextHeight) / 2,
+//                mTextPaint);
     }
 
-    /**
-     * Gets the example string attribute value.
-     *
-     * @return The example string attribute value.
-     */
-    public String getExampleString() {
-        return mExampleString;
-    }
-
-    /**
-     * Sets the view's example string attribute value. In the example view, this string
-     * is the text to draw.
-     *
-     * @param exampleString The example string attribute value to use.
-     */
-    public void setExampleString(String exampleString) {
-        mExampleString = exampleString;
-        invalidateTextPaintAndMeasurements();
-    }
-
-    /**
-     * Gets the example color attribute value.
-     *
-     * @return The example color attribute value.
-     */
-    public int getExampleColor() {
-        return mExampleColor;
-    }
-
-    /**
-     * Sets the view's example color attribute value. In the example view, this color
-     * is the font color.
-     *
-     * @param exampleColor The example color attribute value to use.
-     */
-    public void setExampleColor(int exampleColor) {
-        mExampleColor = exampleColor;
-        invalidateTextPaintAndMeasurements();
-    }
-
-    /**
-     * Gets the example dimension attribute value.
-     *
-     * @return The example dimension attribute value.
-     */
-    public float getExampleDimension() {
-        return mExampleDimension;
-    }
-
-    /**
-     * Sets the view's example dimension attribute value. In the example view, this dimension
-     * is the font size.
-     *
-     * @param exampleDimension The example dimension attribute value to use.
-     */
-    public void setExampleDimension(float exampleDimension) {
-        mExampleDimension = exampleDimension;
-        invalidateTextPaintAndMeasurements();
-    }
-
-    /**
-     * Gets the example drawable attribute value.
-     *
-     * @return The example drawable attribute value.
-     */
-    public Drawable getExampleDrawable() {
-        return mExampleDrawable;
-    }
-
-    /**
-     * Sets the view's example drawable attribute value. In the example view, this drawable is
-     * drawn above the text.
-     *
-     * @param exampleDrawable The example drawable attribute value to use.
-     */
-    public void setExampleDrawable(Drawable exampleDrawable) {
-        mExampleDrawable = exampleDrawable;
-    }
 }
