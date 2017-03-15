@@ -8,16 +8,26 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.util.AttributeSet;
 import android.view.View;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * TODO: document your custom view class.
  */
 public class CodeViewer extends View {
+    private int mPaddingLeft, mPaddingTop, mPaddingRight, mPaddingBottom, mContentWidth, mContentHeight;
     private int mKeywordColor, mVariableColor, mPrimitiveColor, mLiteralColor;
     private int mLanguage, mTabLength;
     private boolean mWrapLines;
+    private String rawSourceCode, mTab;
+    private Paint mDefaultPaint;
+    private StringBuilder mStringBuilder;
+    private Pattern mBlockBeginSign, mBlockEndSign, mKeyWords;
+    private Matcher matcher;
 
     public CodeViewer(Context context) {
         super(context);
@@ -38,16 +48,34 @@ public class CodeViewer extends View {
         TypedArray a = getContext().obtainStyledAttributes(attrs, R.styleable.CodeViewer);
 
         try{
-            mWrapLines     = a.getBoolean(R.styleable.CodeViewer_wrapLines, true);
-            mLanguage      = a.getInteger(R.styleable.CodeViewer_language, 0);
-            mTabLength     = a.getInteger(R.styleable.CodeViewer_tabLength, 4);
-            mKeywordColor  = a.getColor(R.styleable.CodeViewer_keywordColor, Color.RED);
-            mVariableColor = a.getColor(R.styleable.CodeViewer_variableColor, Color.BLUE);
+            mWrapLines      = a.getBoolean(R.styleable.CodeViewer_wrapLines, true);
+            mLanguage       = a.getInteger(R.styleable.CodeViewer_language, 0);
+            mTabLength      = a.getInteger(R.styleable.CodeViewer_tabLength, 4);
+            mKeywordColor   = a.getColor(R.styleable.CodeViewer_keywordColor, Color.RED);
+            mVariableColor  = a.getColor(R.styleable.CodeViewer_variableColor, Color.BLUE);
             mPrimitiveColor = a.getColor(R.styleable.CodeViewer_primitiveColor, Color.RED);
             mLiteralColor   = a.getColor(R.styleable.CodeViewer_literalColor, Color.GREEN);
+
+            rawSourceCode = "";
+
+            mTab = new String(new char[mTabLength]).replace("\0", " ");
+            mStringBuilder = new StringBuilder();
+            mBlockBeginSign = Pattern.compile("canvas");
+            mBlockEndSign = Pattern.compile("\\}");
+            mKeyWords = Pattern.compile("boolean|do|if|private|this|break|double|implements|protected|throw|byte|else|import|public|throws|case|enum|instanceof|return|transient|catch|extends|int|short|try|char|final|interface|static|void|class|finally|long|strictfp|volatile|const|float|native|super|while");
+
+            mDefaultPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            mDefaultPaint.setColor(Color.BLACK);
+            mDefaultPaint.setTextSize(40);
+            mDefaultPaint.setTextAlign(Paint.Align.LEFT);
+
         }finally{
             a.recycle();
         }
+    }
+
+    public void setSourceCode(String code){
+        rawSourceCode = code;
     }
 
 
@@ -55,21 +83,49 @@ public class CodeViewer extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        // TODO: consider storing these as member variables to reduce
-        // allocations per draw cycle.
-        int paddingLeft = getPaddingLeft();
-        int paddingTop = getPaddingTop();
-        int paddingRight = getPaddingRight();
-        int paddingBottom = getPaddingBottom();
+        mPaddingLeft = getPaddingLeft();
+        mPaddingTop = getPaddingTop();
+        mPaddingRight = getPaddingRight();
+        mPaddingBottom = getPaddingBottom();
+        mContentWidth = getWidth() - mPaddingLeft - mPaddingRight;
+        mContentHeight = getHeight() - mPaddingTop - mPaddingBottom;
 
-        int contentWidth = getWidth() - paddingLeft - paddingRight;
-        int contentHeight = getHeight() - paddingTop - paddingBottom;
+        String[] lines = rawSourceCode.split("\\n");
+        int level = 0;
+        float linePointer =  mPaddingTop + mDefaultPaint.getTextSize();
 
-        // Draw the text.
-//        canvas.drawText(mExampleString,
-//                paddingLeft + (contentWidth - mTextWidth) / 2,
-//                paddingTop + (contentHeight + mTextHeight) / 2,
-//                mTextPaint);
+        for(String line : lines){
+            int count = level;
+            mStringBuilder.setLength(0);
+            while(count > 0){ mStringBuilder.append(mTab); count--; }
+            mStringBuilder.append(line.trim());
+
+            matcher = mBlockBeginSign.matcher(mStringBuilder.toString());
+            if(matcher.matches()){
+                level++;
+            }
+
+            matcher = mBlockEndSign.matcher(mStringBuilder.toString());
+            if(matcher.matches()){
+                level--;
+                mStringBuilder.delete(0, mTabLength);
+            }
+
+            // Draw the text.
+            canvas.drawText(mStringBuilder.toString(),
+                    mPaddingLeft,
+                    linePointer,
+                    mDefaultPaint);
+            linePointer += mDefaultPaint.getTextSize() + 5;
+        }
+
+//        // Draw the text.
+//        canvas.drawText(rawSourceCode,
+//                mPaddingLeft,
+//                mPaddingTop + mDefaultPaint.getTextSize(),
+//                mDefaultPaint);
+//        paddingLeft + (contentWidth - mTextWidth) / 2,
+//        paddingTop + (contentHeight + mTextHeight) / 2,
     }
 
 }
