@@ -2,6 +2,7 @@ package com.wilson.customviewdemo_codeviewer;
 
 // https://www.youtube.com/watch?v=ktbYUrlN_Ws
 // https://www.youtube.com/watch?v=-8M5nDABiqg
+// https://plus.google.com/u/0/+ArpitMathur/posts/cT1EuBbxEgN
 // Measure starts first
 
 import android.content.Context;
@@ -20,13 +21,13 @@ import java.util.regex.Pattern;
  */
 public class CodeViewer extends View {
     private int mPaddingLeft, mPaddingTop, mPaddingRight, mPaddingBottom, mContentWidth, mContentHeight;
-    private int mKeywordColor, mVariableColor, mPrimitiveColor, mLiteralColor;
+    private int mKeywordColor, mVariableColor, mPrimitiveColor, mLiteralColor, mCommentColor;
     private int mLanguage, mTabLength;
     private boolean mWrapLines;
     private String rawSourceCode, mTab;
-    private Paint mDefaultPaint;
+    private Paint mDefaultPaint, mKeyWordPaint, mCommentPaint;
     private StringBuilder mStringBuilder;
-    private Pattern mBlockBeginSign, mBlockEndSign, mKeyWords;
+    private Pattern mBlockBeginSign, mBlockEndSign, mKeyWords, mComment;
     private Matcher matcher;
 
     public CodeViewer(Context context) {
@@ -55,6 +56,7 @@ public class CodeViewer extends View {
             mVariableColor  = a.getColor(R.styleable.CodeViewer_variableColor, Color.BLUE);
             mPrimitiveColor = a.getColor(R.styleable.CodeViewer_primitiveColor, Color.RED);
             mLiteralColor   = a.getColor(R.styleable.CodeViewer_literalColor, Color.GREEN);
+            mCommentColor   = a.getColor(R.styleable.CodeViewer_literalColor, Color.GRAY);
 
             rawSourceCode = "";
 
@@ -62,12 +64,19 @@ public class CodeViewer extends View {
             mStringBuilder = new StringBuilder();
             mBlockBeginSign = Pattern.compile("canvas");
             mBlockEndSign = Pattern.compile("\\}");
-            mKeyWords = Pattern.compile("boolean|do|if|private|this|break|double|implements|protected|throw|byte|else|import|public|throws|case|enum|instanceof|return|transient|catch|extends|int|short|try|char|final|interface|static|void|class|finally|long|strictfp|volatile|const|float|native|super|while");
+            mKeyWords = Pattern.compile("\\bboolean\\b|\\bdo\\b|\\bif\\b|\\bprivate\\b|\\bthis\\b|\\bbreak\\b|\\bdouble\\b|\\bimplements\\b|\\bprotected\\b|\\bthrow\\b|\\bbyte\\b|\\belse\\b|\\bimport\\b|\\bpublic\\b|\\bthrows\\b|\\bcase\\b|\\benum\\b|\\binstanceof\\b|\\breturn\\b|\\btransient\\b|\\bcatch\\b|\\bextends\\b|\\bint\\b|\\bshort\\b|\\btry\\b|\\bchar\\b|\\bfinal\\b|\\binterface\\b|\\bstatic\\b|\\bvoid\\b|\\bclass\\b|\\bfinally\\b|\\blong\\b|\\bstrictfp\\b|\\bvolatile\\b|\\bconst\\b|\\bfloat\\b|\\bnative\\b|\\bsuper\\b|\\bwhile\\b");
+            mComment = Pattern.compile("//[\\s\\S]*");
 
             mDefaultPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             mDefaultPaint.setColor(Color.BLACK);
             mDefaultPaint.setTextSize(40);
             mDefaultPaint.setTextAlign(Paint.Align.LEFT);
+
+            mKeyWordPaint = new Paint(mDefaultPaint);
+            mKeyWordPaint.setColor(mKeywordColor);
+
+            mCommentPaint = new Paint(mDefaultPaint);
+            mCommentPaint.setColor(mCommentColor);
 
         }finally{
             a.recycle();
@@ -98,25 +107,64 @@ public class CodeViewer extends View {
             int count = level;
             mStringBuilder.setLength(0);
             while(count > 0){ mStringBuilder.append(mTab); count--; }
+            String tab = mStringBuilder.toString();
+            String[] words = line.trim().split(" +");
+            float wordPointer = mPaddingLeft;
             mStringBuilder.append(line.trim());
+            boolean inComment = false;
+
+            canvas.drawText(tab,
+                    wordPointer,
+                    linePointer,
+                    mDefaultPaint );
+
+            wordPointer += mDefaultPaint.measureText(tab);
 
             matcher = mBlockBeginSign.matcher(mStringBuilder.toString());
-            if(matcher.matches()){
+            if(matcher.find()){
                 level++;
             }
 
             matcher = mBlockEndSign.matcher(mStringBuilder.toString());
-            if(matcher.matches()){
+            if(matcher.find()){
                 level--;
                 mStringBuilder.delete(0, mTabLength);
             }
 
-            // Draw the text.
-            canvas.drawText(mStringBuilder.toString(),
-                    mPaddingLeft,
-                    linePointer,
-                    mDefaultPaint);
+            if(match(mComment, line)){
+                inComment = true;
+            }
+
+            for(String word : words) {
+                if(inComment) {
+                    canvas.drawText(word + " ",
+                            wordPointer,
+                            linePointer,
+                            mCommentPaint);
+                    wordPointer += mCommentPaint.measureText(word + " ");
+                } else if (match(mKeyWords, word)) {
+                    canvas.drawText(word + " ",
+                            wordPointer,
+                            linePointer,
+                            mKeyWordPaint);
+                    wordPointer += mKeyWordPaint.measureText(word + " ");
+                }else{
+                    canvas.drawText(word + " ",
+                            wordPointer,
+                            linePointer,
+                            mDefaultPaint);
+                    wordPointer += mDefaultPaint.measureText(word + " ");
+                }
+            }
+
             linePointer += mDefaultPaint.getTextSize() + 5;
+
+//            // Draw the text.
+//            canvas.drawText(mStringBuilder.toString(),
+//                    mPaddingLeft,
+//                    linePointer,
+//                    mDefaultPaint);
+//            linePointer += mDefaultPaint.getTextSize() + 5;
         }
 
 //        // Draw the text.
@@ -126,6 +174,11 @@ public class CodeViewer extends View {
 //                mDefaultPaint);
 //        paddingLeft + (contentWidth - mTextWidth) / 2,
 //        paddingTop + (contentHeight + mTextHeight) / 2,
+    }
+
+    private boolean match(Pattern pattern, String word){
+        Matcher m = pattern.matcher(word);
+        return m.find();
     }
 
 }
