@@ -14,6 +14,7 @@
         app:literalColor="@color/green"
         app:primitiveColor="@color/red"
         app:variableColor="@color/blue"
+        app:commentColor="@color/green"
         app:wrapLines="true"
         app:tabLength="4"
         app:language="java" />

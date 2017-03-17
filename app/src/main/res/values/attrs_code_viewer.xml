@@ -5,6 +5,7 @@
         <attr name="variableColor" format="color" />
         <attr name="primitiveColor" format="color" />
         <attr name="literalColor" format="color" />
+        <attr name="commentColor" format="color" />
         <attr name="tabLength" format="integer" />
         <attr name="language" format="enum">
             <enum name="java" value="0" />
