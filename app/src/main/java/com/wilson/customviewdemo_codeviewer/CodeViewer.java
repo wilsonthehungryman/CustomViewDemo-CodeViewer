@@ -25,9 +25,9 @@ public class CodeViewer extends View {
     private int mLanguage, mTabLength;
     private boolean mWrapLines;
     private String rawSourceCode, mTab;
-    private Paint mDefaultPaint, mKeyWordPaint, mCommentPaint;
+    private Paint mDefaultPaint, mKeyWordPaint, mCommentPaint, mLiteralPaint;
     private StringBuilder mStringBuilder;
-    private Pattern mBlockBeginSign, mBlockEndSign, mKeyWords, mComment;
+    private Pattern mBlockBeginSign, mBlockEndSign, mKeyWords, mComment, mNumeric;
     private Matcher matcher;
 
     public CodeViewer(Context context) {
@@ -54,7 +54,7 @@ public class CodeViewer extends View {
             mTabLength      = a.getInteger(R.styleable.CodeViewer_tabLength, 4);
             mKeywordColor   = a.getColor(R.styleable.CodeViewer_keywordColor, Color.RED);
             mVariableColor  = a.getColor(R.styleable.CodeViewer_variableColor, Color.BLUE);
-            mPrimitiveColor = a.getColor(R.styleable.CodeViewer_primitiveColor, Color.RED);
+            mPrimitiveColor = a.getColor(R.styleable.CodeViewer_primitiveColor, mKeywordColor);
             mLiteralColor   = a.getColor(R.styleable.CodeViewer_literalColor, Color.GREEN);
             mCommentColor   = a.getColor(R.styleable.CodeViewer_literalColor, Color.GRAY);
 
@@ -62,10 +62,16 @@ public class CodeViewer extends View {
 
             mTab = new String(new char[mTabLength]).replace("\0", " ");
             mStringBuilder = new StringBuilder();
-            mBlockBeginSign = Pattern.compile("canvas");
+
+            mNumeric = Pattern.compile("\\d+");
+
+            // Java
+            mBlockBeginSign = Pattern.compile("\\{");
             mBlockEndSign = Pattern.compile("\\}");
             mKeyWords = Pattern.compile("\\bboolean\\b|\\bdo\\b|\\bif\\b|\\bprivate\\b|\\bthis\\b|\\bbreak\\b|\\bdouble\\b|\\bimplements\\b|\\bprotected\\b|\\bthrow\\b|\\bbyte\\b|\\belse\\b|\\bimport\\b|\\bpublic\\b|\\bthrows\\b|\\bcase\\b|\\benum\\b|\\binstanceof\\b|\\breturn\\b|\\btransient\\b|\\bcatch\\b|\\bextends\\b|\\bint\\b|\\bshort\\b|\\btry\\b|\\bchar\\b|\\bfinal\\b|\\binterface\\b|\\bstatic\\b|\\bvoid\\b|\\bclass\\b|\\bfinally\\b|\\blong\\b|\\bstrictfp\\b|\\bvolatile\\b|\\bconst\\b|\\bfloat\\b|\\bnative\\b|\\bsuper\\b|\\bwhile\\b");
             mComment = Pattern.compile("//[\\s\\S]*");
+
+            // Colouring
 
             mDefaultPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             mDefaultPaint.setColor(Color.BLACK);
@@ -77,6 +83,9 @@ public class CodeViewer extends View {
 
             mCommentPaint = new Paint(mDefaultPaint);
             mCommentPaint.setColor(mCommentColor);
+
+            mLiteralPaint = new Paint(mDefaultPaint);
+            mLiteralPaint.setColor(mLiteralColor);
 
         }finally{
             a.recycle();
@@ -148,6 +157,12 @@ public class CodeViewer extends View {
                             linePointer,
                             mKeyWordPaint);
                     wordPointer += mKeyWordPaint.measureText(word + " ");
+                }else if (match(mNumeric, word)){
+                    canvas.drawText(word + " ",
+                            wordPointer,
+                            linePointer,
+                            mLiteralPaint);
+                    wordPointer += mLiteralPaint.measureText(word + " ");
                 }else{
                     canvas.drawText(word + " ",
                             wordPointer,

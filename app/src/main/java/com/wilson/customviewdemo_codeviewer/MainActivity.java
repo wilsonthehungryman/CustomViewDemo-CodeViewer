@@ -35,6 +35,11 @@ public class MainActivity extends AppCompatActivity {
                 "                mPaddingLeft + (mContentWidth) / 2,\n" +
                 "                mPaddingTop + (mContentHeight) / 2,\n" +
                 "                mDefaultPaint);\n" +
+                "        mContentHeight = getHeight() - mPaddingTop - mPaddingBottom;\n" +
+                "\n" +
+                "        int final number = 19.19" +
+                "\n" +
+                "        String literal = \" something\"" +
                 "    }");
     }
 }
