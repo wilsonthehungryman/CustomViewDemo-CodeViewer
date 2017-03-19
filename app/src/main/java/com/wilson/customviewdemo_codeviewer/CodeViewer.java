@@ -20,14 +20,14 @@ import java.util.regex.Pattern;
  * TODO: document your custom view class.
  */
 public class CodeViewer extends View {
-    private int mPaddingLeft, mPaddingTop, mPaddingRight, mPaddingBottom, mContentWidth, mContentHeight;
-    private int mKeywordColor, mVariableColor, mPrimitiveColor, mLiteralColor, mCommentColor;
+    int mPaddingLeft, mPaddingTop, mPaddingRight, mPaddingBottom, mContentWidth, mContentHeight;
+    int mKeywordColor, mVariableColor, mPrimitiveColor, mLiteralColor, mCommentColor;
     private int mLanguage, mTabLength;
     private boolean mWrapLines;
     private String rawSourceCode, mTab;
     private Paint mDefaultPaint, mKeyWordPaint, mCommentPaint, mLiteralPaint, mVariablePaint, mPrimitivePaint;
     private StringBuilder mStringBuilder, mVariableRegex;
-    private Pattern mBlockBeginSign, mBlockEndSign, mKeyWords, mComment, mNumeric, mPrimitives;
+    private Pattern mBlockBeginSign, mBlockEndSign, mLiteralBegin, mLiteralEnd, mSingleQuoteLiteral, mKeyWords, mComment, mNumeric, mPrimitives;
     private Matcher matcher;
 
     public CodeViewer(Context context) {
@@ -49,7 +49,7 @@ public class CodeViewer extends View {
         TypedArray a = getContext().obtainStyledAttributes(attrs, R.styleable.CodeViewer);
 
         try{
-            mWrapLines      = a.getBoolean(R.styleable.CodeViewer_wrapLines, true);
+            mWrapLines      = a.getBoolean(R.styleable.CodeViewer_wrapLines, false);
             mLanguage       = a.getInteger(R.styleable.CodeViewer_language, 0);
             mTabLength      = a.getInteger(R.styleable.CodeViewer_tabLength, 4);
             mKeywordColor   = a.getColor(R.styleable.CodeViewer_keywordColor, Color.RED);
@@ -69,6 +69,9 @@ public class CodeViewer extends View {
             // Java
             mBlockBeginSign = Pattern.compile("\\{");
             mBlockEndSign = Pattern.compile("\\}");
+            mSingleQuoteLiteral = Pattern.compile("^'");
+            mLiteralBegin = Pattern.compile("^\\\"");
+            mLiteralEnd = Pattern.compile("[^\\\\\\\\]\\\\\\\\\\\\\\\"$");
             mKeyWords = Pattern.compile("\\b@\\w+\\b|\\bdo\\b|\\bif\\b|\\bprivate\\b|\\bthis\\b|\\bbreak\\b|\\bimplements\\b|\\bprotected\\b|\\bthrow\\b|\\belse\\b|\\bimport\\b|\\bpublic\\b|\\bthrows\\b|\\bcase\\b|\\benum\\b|\\binstanceof\\b|\\breturn\\b|\\btransient\\b|\\bcatch\\b|\\bextends\\b|\\btry\\b|\\bfinal\\b|\\binterface\\b|\\bstatic\\b|\\bvoid\\b|\\bclass\\b|\\bfinally\\b|\\bstrictfp\\b|\\bvolatile\\b|\\bconst\\b|\\bnative\\b|\\bsuper\\b|\\bwhile\\b");
             mPrimitives = Pattern.compile("\\bint\\b|\\bboolean\\b|\\bbyte\\b|\\bshort\\b|\\blong\\b|\\bfloat\\b|\\bdouble\\b|\\bchar\\b");
             mComment = Pattern.compile("//[\\s\\S]*");
@@ -124,30 +127,31 @@ public class CodeViewer extends View {
             int count = level;
             mStringBuilder.setLength(0);
             while(count > 0){ mStringBuilder.append(mTab); count--; }
-            String tab = mStringBuilder.toString();
+            String tab;
             String[] words = line.trim().split(" +");
             float wordPointer = mPaddingLeft;
-            mStringBuilder.append(line.trim());
-            boolean inComment = false;
+            boolean inComment = false, inLiteral = false;
             Paint paint = mDefaultPaint;
 
-            canvas.drawText(tab,
-                    wordPointer,
-                    linePointer,
-                    mDefaultPaint );
-
-            wordPointer += mDefaultPaint.measureText(tab);
-
-            matcher = mBlockBeginSign.matcher(mStringBuilder.toString());
+            matcher = mBlockBeginSign.matcher(line);
             if(matcher.find()){
                 level++;
             }
 
-            matcher = mBlockEndSign.matcher(mStringBuilder.toString());
+            matcher = mBlockEndSign.matcher(line);
             if(matcher.find()){
                 level--;
                 mStringBuilder.delete(0, mTabLength);
             }
+
+            tab = mStringBuilder.toString();
+            canvas.drawText(tab,
+                    wordPointer,
+                    linePointer,
+                    paint);
+
+            wordPointer += paint.measureText(tab);
+
 
             if(match(mComment, line)){
                 inComment = true;
@@ -157,6 +161,15 @@ public class CodeViewer extends View {
                 String word = words[j];
                 if(inComment) {
                     paint = mCommentPaint;
+                }else if(inLiteral) {
+                    if(match(mLiteralEnd, word)){
+                        inLiteral = false;
+                    }
+                }else if(match(mLiteralBegin, word)) {
+                    inLiteral = true;
+                    paint = mLiteralPaint;
+                }else if(match(mSingleQuoteLiteral, word)){
+                    paint = mLiteralPaint;
                 }else if (match(mPrimitives, word)) {
                     for(int k = j +1; k < words.length; k++){
                         String possibleVar = words[k].replace(",", "").replace(";", "");
