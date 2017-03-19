@@ -127,30 +127,31 @@ public class CodeViewer extends View {
             int count = level;
             mStringBuilder.setLength(0);
             while(count > 0){ mStringBuilder.append(mTab); count--; }
-            String tab = mStringBuilder.toString();
+            String tab;
             String[] words = line.trim().split(" +");
             float wordPointer = mPaddingLeft;
-            mStringBuilder.append(line.trim());
             boolean inComment = false, inLiteral = false;
             Paint paint = mDefaultPaint;
 
-            canvas.drawText(tab,
-                    wordPointer,
-                    linePointer,
-                    mDefaultPaint );
-
-            wordPointer += mDefaultPaint.measureText(tab);
-
-            matcher = mBlockBeginSign.matcher(mStringBuilder.toString());
+            matcher = mBlockBeginSign.matcher(line);
             if(matcher.find()){
                 level++;
             }
 
-            matcher = mBlockEndSign.matcher(mStringBuilder.toString());
+            matcher = mBlockEndSign.matcher(line);
             if(matcher.find()){
                 level--;
                 mStringBuilder.delete(0, mTabLength);
             }
+
+            tab = mStringBuilder.toString();
+            canvas.drawText(tab,
+                    wordPointer,
+                    linePointer,
+                    paint);
+
+            wordPointer += paint.measureText(tab);
+
 
             if(match(mComment, line)){
                 inComment = true;
