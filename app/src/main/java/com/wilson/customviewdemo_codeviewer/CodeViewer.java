@@ -25,9 +25,9 @@ public class CodeViewer extends View {
     private int mLanguage, mTabLength;
     private boolean mWrapLines;
     private String rawSourceCode, mTab;
-    private Paint mDefaultPaint, mKeyWordPaint, mCommentPaint, mLiteralPaint;
-    private StringBuilder mStringBuilder;
-    private Pattern mBlockBeginSign, mBlockEndSign, mKeyWords, mComment, mNumeric;
+    private Paint mDefaultPaint, mKeyWordPaint, mCommentPaint, mLiteralPaint, mVariablePaint, mPrimitivePaint;
+    private StringBuilder mStringBuilder, mVariableRegex;
+    private Pattern mBlockBeginSign, mBlockEndSign, mKeyWords, mComment, mNumeric, mPrimitives;
     private Matcher matcher;
 
     public CodeViewer(Context context) {
@@ -62,17 +62,18 @@ public class CodeViewer extends View {
 
             mTab = new String(new char[mTabLength]).replace("\0", " ");
             mStringBuilder = new StringBuilder();
+            mVariableRegex = new StringBuilder();
 
             mNumeric = Pattern.compile("\\d+");
 
             // Java
             mBlockBeginSign = Pattern.compile("\\{");
             mBlockEndSign = Pattern.compile("\\}");
-            mKeyWords = Pattern.compile("\\bboolean\\b|\\bdo\\b|\\bif\\b|\\bprivate\\b|\\bthis\\b|\\bbreak\\b|\\bdouble\\b|\\bimplements\\b|\\bprotected\\b|\\bthrow\\b|\\bbyte\\b|\\belse\\b|\\bimport\\b|\\bpublic\\b|\\bthrows\\b|\\bcase\\b|\\benum\\b|\\binstanceof\\b|\\breturn\\b|\\btransient\\b|\\bcatch\\b|\\bextends\\b|\\bint\\b|\\bshort\\b|\\btry\\b|\\bchar\\b|\\bfinal\\b|\\binterface\\b|\\bstatic\\b|\\bvoid\\b|\\bclass\\b|\\bfinally\\b|\\blong\\b|\\bstrictfp\\b|\\bvolatile\\b|\\bconst\\b|\\bfloat\\b|\\bnative\\b|\\bsuper\\b|\\bwhile\\b");
+            mKeyWords = Pattern.compile("\\b@\\w+\\b|\\bdo\\b|\\bif\\b|\\bprivate\\b|\\bthis\\b|\\bbreak\\b|\\bimplements\\b|\\bprotected\\b|\\bthrow\\b|\\belse\\b|\\bimport\\b|\\bpublic\\b|\\bthrows\\b|\\bcase\\b|\\benum\\b|\\binstanceof\\b|\\breturn\\b|\\btransient\\b|\\bcatch\\b|\\bextends\\b|\\btry\\b|\\bfinal\\b|\\binterface\\b|\\bstatic\\b|\\bvoid\\b|\\bclass\\b|\\bfinally\\b|\\bstrictfp\\b|\\bvolatile\\b|\\bconst\\b|\\bnative\\b|\\bsuper\\b|\\bwhile\\b");
+            mPrimitives = Pattern.compile("\\bint\\b|\\bboolean\\b|\\bbyte\\b|\\bshort\\b|\\blong\\b|\\bfloat\\b|\\bdouble\\b|\\bchar\\b");
             mComment = Pattern.compile("//[\\s\\S]*");
 
             // Colouring
-
             mDefaultPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             mDefaultPaint.setColor(Color.BLACK);
             mDefaultPaint.setTextSize(40);
@@ -86,6 +87,12 @@ public class CodeViewer extends View {
 
             mLiteralPaint = new Paint(mDefaultPaint);
             mLiteralPaint.setColor(mLiteralColor);
+
+            mPrimitivePaint = new Paint(mDefaultPaint);
+            mPrimitivePaint.setColor(mPrimitiveColor);
+
+            mVariablePaint = new Paint(mDefaultPaint);
+            mVariablePaint.setColor(mVariableColor);
 
         }finally{
             a.recycle();
@@ -113,6 +120,7 @@ public class CodeViewer extends View {
         float linePointer =  mPaddingTop + mDefaultPaint.getTextSize();
 
         for(String line : lines){
+            //String line = lines[i];
             int count = level;
             mStringBuilder.setLength(0);
             while(count > 0){ mStringBuilder.append(mTab); count--; }
@@ -121,6 +129,7 @@ public class CodeViewer extends View {
             float wordPointer = mPaddingLeft;
             mStringBuilder.append(line.trim());
             boolean inComment = false;
+            Paint paint = mDefaultPaint;
 
             canvas.drawText(tab,
                     wordPointer,
@@ -144,32 +153,33 @@ public class CodeViewer extends View {
                 inComment = true;
             }
 
-            for(String word : words) {
+            for(int j = 0; j < words.length; j++) {
+                String word = words[j];
                 if(inComment) {
-                    canvas.drawText(word + " ",
-                            wordPointer,
-                            linePointer,
-                            mCommentPaint);
-                    wordPointer += mCommentPaint.measureText(word + " ");
+                    paint = mCommentPaint;
+                }else if (match(mPrimitives, word)) {
+                    for(int k = j +1; k < words.length; k++){
+                        String possibleVar = words[k].replace(",", "").replace(";", "");
+                        if(!Pattern.compile("\\W").matcher(possibleVar).find()){
+                            mVariableRegex.append("\\b" + possibleVar + "\\b|");
+                        }
+                    }
+                    paint = mPrimitivePaint;
+                }else if(mVariableRegex.length() > 0 && match(Pattern.compile(mVariableRegex.toString().substring(0, mVariableRegex.length() - 1)), word)){
+                    paint = mVariablePaint;
                 } else if (match(mKeyWords, word)) {
-                    canvas.drawText(word + " ",
-                            wordPointer,
-                            linePointer,
-                            mKeyWordPaint);
-                    wordPointer += mKeyWordPaint.measureText(word + " ");
+                    paint = mKeyWordPaint;
                 }else if (match(mNumeric, word)){
-                    canvas.drawText(word + " ",
-                            wordPointer,
-                            linePointer,
-                            mLiteralPaint);
-                    wordPointer += mLiteralPaint.measureText(word + " ");
+                    paint = mLiteralPaint;
                 }else{
-                    canvas.drawText(word + " ",
-                            wordPointer,
-                            linePointer,
-                            mDefaultPaint);
-                    wordPointer += mDefaultPaint.measureText(word + " ");
+                    paint = mDefaultPaint;
                 }
+
+                canvas.drawText(word + " ",
+                        wordPointer,
+                        linePointer,
+                        paint);
+                wordPointer += paint.measureText(word + " ");
             }
 
             linePointer += mDefaultPaint.getTextSize() + 5;
