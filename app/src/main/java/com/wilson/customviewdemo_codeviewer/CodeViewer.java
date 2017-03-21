@@ -46,10 +46,12 @@ public class CodeViewer extends View {
     private String rawSourceCode, mTab;
 
     // These attributes are for syntax highlighting
-    private Paint mDefaultPaint, mKeyWordPaint, mCommentPaint, mLiteralPaint, mVariablePaint, mPrimitivePaint;
+    private Paint mDefaultPaint, mKeyWordPaint, mCommentPaint, mLiteralPaint, mVariablePaint, mPrimitivePaint, mBackgroundPaintOdd, mBackgroundPaintEven;
     private StringBuilder mStringBuilder, mVariableRegex;
     private Pattern mBlockBeginSign, mBlockEndSign, mLiteralBegin, mLiteralEnd, mSingleQuoteLiteral, mKeyWords, mComment, mNumeric, mPrimitives;
     private Matcher matcher;
+    private float textHeight;
+    private int mLineSpacing;
 
     /**
      * Constructor for CodeViewer
@@ -104,6 +106,8 @@ public class CodeViewer extends View {
             mLiteralColor   = a.getColor(R.styleable.CodeViewer_literalColor, Color.GREEN);
             mCommentColor   = a.getColor(R.styleable.CodeViewer_literalColor, Color.GRAY);
 
+            mLineSpacing = 5;
+
             // Initialize the rawSourceCode if null
             // Raw source code must be set after creation (this method)
             if(rawSourceCode == null)
@@ -135,6 +139,7 @@ public class CodeViewer extends View {
             mDefaultPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             mDefaultPaint.setColor(Color.BLACK);
             mDefaultPaint.setTextSize(40);
+            mDefaultPaint.setTextAlign(Paint.Align.CENTER);
             mDefaultPaint.setTextAlign(Paint.Align.LEFT);
 
             // Use the default paint as a base, then set the color
@@ -154,6 +159,16 @@ public class CodeViewer extends View {
 
             mVariablePaint = new Paint(mDefaultPaint);
             mVariablePaint.setColor(mVariableColor);
+
+            mBackgroundPaintOdd = new Paint();
+            mBackgroundPaintOdd.setColor( Color.rgb(249, 237, 209));
+
+            mBackgroundPaintEven = new Paint(mBackgroundPaintOdd);
+            mBackgroundPaintEven.setColor(Color.rgb(249, 222, 157));
+
+            // Calculate the text height (based on fontMetrics)
+            Paint.FontMetrics fm = mDefaultPaint.getFontMetrics();
+            textHeight = fm.descent - fm.ascent;
 
         }finally{
             // From what I understand this caches the typedarray for quicker use later
@@ -197,9 +212,11 @@ public class CodeViewer extends View {
 
         // Points to the current line (vertically)
         float linePointer =  mPaddingTop + mDefaultPaint.getTextSize();
+        float linePointerStart = 0;
 
         // Loop one line at a time
-        for(String line : lines){
+        for(int i = 0; i < lines.length; i++){
+            String line = lines[i];
             // use the string builder to create the tab
             int count = level;
             mStringBuilder.setLength(0);
@@ -237,6 +254,14 @@ public class CodeViewer extends View {
                     linePointer,
                     paint);
 
+            // Draw the background line colour, must be drawn before the words to remain in bkgrnd
+            // may be a way to force it to the back...
+            canvas.drawRect(0, linePointer - textHeight + mLineSpacing + 2,
+                    getWidth(),
+                    linePointer + mLineSpacing + 7,
+                    ((i % 2 == 0) ? mBackgroundPaintEven : mBackgroundPaintOdd));
+
+
             // move the horizontal pointer
             wordPointer += paint.measureText(tab);
 
@@ -259,7 +284,6 @@ public class CodeViewer extends View {
                     if(match(mLiteralEnd, word)){
                         inLiteral = false;
                     }
-                    // No need to set paint, still set from before
                 }else if(match(mLiteralBegin, word)) {
                     inLiteral = true;
                     paint = mLiteralPaint;
@@ -300,8 +324,9 @@ public class CodeViewer extends View {
                 wordPointer += paint.measureText(word + " ");
             }
 
+
             // Move the line pointer
-            linePointer += mDefaultPaint.getTextSize() + 5;
+            linePointer += textHeight + mLineSpacing;
         }
     }
 
